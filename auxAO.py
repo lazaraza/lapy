@@ -681,7 +681,6 @@ class WFS_aux(vis):
         self.makePupHD()
         # self.makeSPup()
         self.makeSubapMap( self.nSA1D, [self.npxlSA]*2, grid_offs=[self.npxlSA/2]*2, aotff=0.2 )
-
         #initialising the field over which Zernike polynomials are defined
         # self.Zmask = circle( self.spupsz/2, self.wfs_size, [self.hp,self.vp] )
 
@@ -916,6 +915,30 @@ class WFS_aux(vis):
             self.Z_pOp   = p.copy()
             self.Z_pOp_i = np.linalg.pinv( p.T@p )@p.T
 
+    def makeCents(self, full=False):
+        sc        = self.sa_coord
+        szx  = szy = self.npxlSA
+        img  = self.wfs_img.copy()
+        img -= img.max()*self.cog_thrs
+        img[img<0]=0
+        j=0
+        for i, c in enumerate(sc):
+            c0 = int(c[0]-szx/2) #corners
+            c1 = int(c[1]-szy/2) #corners
+            c2 = int(c[0]+szx/2) #corners
+            c3 = int(c[1]+szy/2) #corners
+
+            psf = lapy.cropCorn( img, [c0,c1,c2,c3])
+            if full:
+                self.wfs_fluxF[c[2]][c[3]] = psf.sum()
+                self.wfs_centF[i] = aotools.centre_of_gravity( psf ) - self.npxlSA/2
+
+            # psf = lapy.cropCorn(self.wfs_img, [c0,c1,c2,c3])
+            if self.sa_coord[i][4]:
+                self.wfs_flux[c[2]][c[3]] = psf.sum()
+                self.wfs_cent[i] = aotools.centre_of_gravity( psf ) - self.npxlSA/2
+                j+=1
+
     def makeSubapsImg(self, calF=None, full=False, A=1):
         '''
         calF - converting nm RMS to whatever is in FFT space pixels
@@ -949,8 +972,10 @@ class WFS_aux(vis):
             c2 = int(c[0]+szx/2) #corners
             c3 = int(c[1]+szy/2) #corners
 
-            E   = lapy.scale( lapy.cropCorn(cpup, [c0,c1,c2,c3] )*subapmask, [20]*2)#down binning phase
-            ph  = lapy.scale( lapy.cropCorn(cphs, [c0,c1,c2,c3] )*subapmask, [20]*2)#down binning phase
+            E   = lapy.cropCorn(cpup, [c0,c1,c2,c3] )*subapmask
+            ph  = lapy.cropCorn(cphs, [c0,c1,c2,c3] )*subapmask
+            # E   = lapy.scale( lapy.cropCorn(cpup, [c0,c1,c2,c3] )*subapmask, [20]*2)#down binning phase
+            # ph  = lapy.scale( lapy.cropCorn(cphs, [c0,c1,c2,c3] )*subapmask, [20]*2)#down binning phase
             psf = self.makePSF( E, ph, self.pad )
 
             self.wfs_img[c1:c3,c0:c2] = psf.copy()
@@ -963,24 +988,7 @@ class WFS_aux(vis):
 
         # self.wfs_img = self.wfs_img/self.wfs_img.max()*(2**self.bpp)
         # if full: self.wfs_imgF = self.wfs_imgF/self.wfs_imgF.max()*(2**self.bpp)
-
-        j=0
-        for i, c in enumerate(sc):
-            c0 = int(c[0]-szx/2) #corners
-            c1 = int(c[1]-szy/2) #corners
-            c2 = int(c[0]+szx/2) #corners
-            c3 = int(c[1]+szy/2) #corners
-
-            psf = lapy.cropCorn(self.wfs_img, [c0,c1,c2,c3])
-            if full:
-                self.wfs_fluxF[c[2]][c[3]] = psf.sum()
-                self.wfs_centF[i] = aotools.centre_of_gravity( psf, self.cog_thrs ) - self.npxlSA/2
-
-            psf = lapy.cropCorn(self.wfs_img, [c0,c1,c2,c3])
-            self.wfs_flux[c[2]][c[3]] = psf.sum()
-            if self.sa_coord[i][4]:
-                self.wfs_cent[i] = aotools.centre_of_gravity( psf, self.cog_thrs ) - self.npxlSA/2
-                j+=1
+        self.makeCents()
 
     def decompCents(self, DRAW=1, re=1):
         if self.full: self.decF = (self.wfs_centF.ravel('F'))@(self.Z_FOp_i)
@@ -1107,8 +1115,11 @@ class WFS_aux(vis):
         c = int(A.shape[0]*(pad-1)/2)
         corns = [c, c, c+A.shape[0], c+A.shape[0]]
         # return lapy.rebin(psf, [A.shape[0],A.shape[1]])
-        # return lapy.cropCorn(psf, corns)
-        return psf#/psf.sum()
+        if self.PSFkern is None:
+            return lapy.cropCorn(psf, corns)
+            # return psf#/psf.sum()
+        else:
+            return fftc( lapy.cropCorn(psf, corns), self.PSFkern, 'same')
 
 class MP_SubapsImg(mp.Process):
     def __init__(self, group=None, target=None, name=None, args=()):
