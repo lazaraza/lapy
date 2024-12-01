@@ -930,7 +930,7 @@ class WFS_aux(vis):
 
             psf = lapy.cropCorn( img, [c0,c1,c2,c3])
             if full:
-                self.wfs_fluxF[c[2]][c[3]] = psf.sum()
+
                 self.wfs_centF[i] = aotools.centre_of_gravity( psf ) - self.npxlSA/2
 
             # psf = lapy.cropCorn(self.wfs_img, [c0,c1,c2,c3])
@@ -984,6 +984,7 @@ class WFS_aux(vis):
                 ph  = lapy.cropCorn(fphs, [c0,c1,c2,c3] )*subapmask
                 psf = self.makePSF( E, ph, self.pad  )
                 self.wfs_imgF[c1:c3,c0:c2] = psf.copy()
+                self.wfs_fluxF[c[2]][c[3]] = psf.sum()
                 # self.wfs_flux[c[2]][c[3]] = lapy.cropCorn( self.wfs_img, [c0,c1,c2,c3]).sum()
 
         # self.wfs_img = self.wfs_img/self.wfs_img.max()*(2**self.bpp)
