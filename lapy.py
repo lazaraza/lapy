@@ -93,7 +93,7 @@ def pol2cart(R, phi):
     y = R * np.sin(phi)
     return x, y
 
-def Gauss_2D( sz, sigma=1, muXY=[0,0]):
+def Gauss_2D( sz=None, sigma=1, muXY=[0,0]):
     '''
         Retunrs normalised 2D Gaussian
         Input:
@@ -103,6 +103,9 @@ def Gauss_2D( sz, sigma=1, muXY=[0,0]):
     '''
     # Initializing value of x,y as grid of kernel size
     # in the range of kernel size
+    if sz is None:
+        print('ERR: size is None, aborting...')
+        return -1j
 
     xm, ym = muXY
     x, y = np.meshgrid(np.linspace(-1, 1, sz), np.linspace(-1, 1, sz))
@@ -202,6 +205,10 @@ def cent(img, modusop='space', confFile="/home/simulink/aocp/config/aocc_sh_wfsc
     return sh.centroid( img )
 
 def getFWHM_area(data):
+    '''
+    Very crude FWHM apporoximation.
+        returns the Diameter of the circle with area the sum of pixels above 1/2 amplitude
+    '''
 
     arr = data/data.max()
 

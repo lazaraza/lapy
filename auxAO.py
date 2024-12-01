@@ -916,19 +916,21 @@ class WFS_aux(vis):
             self.Z_pOp   = p.copy()
             self.Z_pOp_i = np.linalg.pinv( p.T@p )@p.T
 
-    def makeSubapsImg(self, calF=None, full=False):
+    def makeSubapsImg(self, calF=None, full=False, A=1):
         '''
         calF - converting nm RMS to whatever is in FFT space pixels
         full - if True calculate the full pupil centroids
+        A    - amplitude of Efield, range [0, 1] normalised to full well depth (33ke)
+        TODO - make A equivalent to number of phots
         '''
         self.full=full
         if calF is None: calF = 1/self.calFFT/self.calFPh
 
         szx = szy = self.npxlSA
         sc        = self.sa_coord
-        fpup      = self.fPup
+        fpup      = self.fPup*A
         fphs      = self.aber*calF
-        cpup      = self.cpup
+        cpup      = self.cpup*A
         cphs      = self.cpup*self.aber*calF
         subapmask = 1#circle( self.npxlSA/2,self.npxlSA)
 
@@ -959,8 +961,8 @@ class WFS_aux(vis):
                 self.wfs_imgF[c1:c3,c0:c2] = psf.copy()
                 # self.wfs_flux[c[2]][c[3]] = lapy.cropCorn( self.wfs_img, [c0,c1,c2,c3]).sum()
 
-        self.wfs_img = self.wfs_img/self.wfs_img.max()*(2**self.bpp)
-        if full: self.wfs_imgF = self.wfs_imgF/self.wfs_imgF.max()*(2**self.bpp)
+        # self.wfs_img = self.wfs_img/self.wfs_img.max()*(2**self.bpp)
+        # if full: self.wfs_imgF = self.wfs_imgF/self.wfs_imgF.max()*(2**self.bpp)
 
         j=0
         for i, c in enumerate(sc):
