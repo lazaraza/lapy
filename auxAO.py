@@ -869,7 +869,7 @@ class WFS_aux(vis):
         partC = []
         for z in range(1, self.nZern):
             self.aber = lapy.insertImage( self.Zlst_2D[z]*A, endShape=[self.wfs_size]*2, vpos=self.vp, hpos=self.hp )
-            self.makeSubapsImg()
+            self.makeSubapsImg(A)
             if self.full: fullC.append(self.wfs_centF.ravel(order='F'))
             partC.append(self.wfs_cent.ravel(order='F'))
 
@@ -915,10 +915,16 @@ class WFS_aux(vis):
             self.Z_pOp   = p.copy()
             self.Z_pOp_i = np.linalg.pinv( p.T@p )@p.T
 
-    def makeCents(self, full=False):
-        sc        = self.sa_coord
+    def makeCents(self, full=False, noiz=False):
+        sc   = self.sa_coord
         szx  = szy = self.npxlSA
-        img  = self.wfs_img.copy()
+        if noiz:
+            self.make_noise()
+            img = self.wfs_img +self.photnoizmap +self.ronim
+            # print('ATTN: NOIZZzz')
+        else:
+            img  = self.wfs_img.copy()
+
         img -= img.max()*self.cog_thrs
         img[img<0]=0
         j=0
@@ -951,9 +957,9 @@ class WFS_aux(vis):
 
         szx = szy = self.npxlSA
         sc        = self.sa_coord
-        fpup      = self.fPup*A
+        fpup      = self.fPup
         fphs      = self.aber*calF
-        cpup      = self.cpup*A
+        cpup      = self.cpup
         cphs      = self.cpup*self.aber*calF
         subapmask = 1#circle( self.npxlSA/2,self.npxlSA)
 
@@ -967,10 +973,10 @@ class WFS_aux(vis):
             self.wfs_centF= np.zeros( (self.n_sub_tot, 2))
 
         for i, c in enumerate(sc):
-            c0 = int(c[0]-szx/2) #corners
-            c1 = int(c[1]-szy/2) #corners
-            c2 = int(c[0]+szx/2) #corners
-            c3 = int(c[1]+szy/2) #corners
+            c0 = int(c[0]-szx/2)   #corners
+            c1 = int(c[1]-szy/2)   #corners
+            c2 = int(c[0]+szx/2)   #corners
+            c3 = int(c[1]+szy/2)   #corners
 
             E   = lapy.cropCorn(cpup, [c0,c1,c2,c3] )*subapmask
             ph  = lapy.cropCorn(cphs, [c0,c1,c2,c3] )*subapmask
@@ -987,8 +993,8 @@ class WFS_aux(vis):
                 self.wfs_fluxF[c[2]][c[3]] = psf.sum()
                 # self.wfs_flux[c[2]][c[3]] = lapy.cropCorn( self.wfs_img, [c0,c1,c2,c3]).sum()
 
-        # self.wfs_img = self.wfs_img/self.wfs_img.max()*(2**self.bpp)
-        # if full: self.wfs_imgF = self.wfs_imgF/self.wfs_imgF.max()*(2**self.bpp)
+        # self.wfs_img = A*self.wfs_img/self.wfs_img.sum()
+        if full: self.wfs_imgF = self.wfs_imgF/self.wfs_imgF.max()*(2**self.bpp)
         self.makeCents()
 
     def decompCents(self, DRAW=1, re=1):
