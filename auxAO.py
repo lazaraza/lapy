@@ -691,6 +691,7 @@ class WFS_aux(vis):
 
         self.Zaber_maker() # here self.aber is generated
         self.pupUp()  # to 'fuse' the pupil with the WFS
+        self.ini_noise()
 
         # initialising the reconstructor operators
         # gradient based
@@ -915,10 +916,10 @@ class WFS_aux(vis):
             self.Z_pOp   = p.copy()
             self.Z_pOp_i = np.linalg.pinv( p.T@p )@p.T
 
-    def makeCents(self, full=False, noiz=False):
+    def makeCents(self, full=False, nz=False):
         sc   = self.sa_coord
         szx  = szy = self.npxlSA
-        if noiz:
+        if nz:
             self.make_noise()
             img = self.wfs_img +self.photnoizmap +self.ronim
             # print('ATTN: NOIZZzz')
@@ -945,7 +946,7 @@ class WFS_aux(vis):
                 self.wfs_cent[i] = aotools.centre_of_gravity( psf ) - self.npxlSA/2
                 j+=1
 
-    def makeSubapsImg(self, calF=None, full=False, A=1):
+    def makeSubapsImg(self, calF=None, full=False, A=1, nz=False):
         '''
         calF - converting nm RMS to whatever is in FFT space pixels
         full - if True calculate the full pupil centroids
@@ -993,9 +994,9 @@ class WFS_aux(vis):
                 self.wfs_fluxF[c[2]][c[3]] = psf.sum()
                 # self.wfs_flux[c[2]][c[3]] = lapy.cropCorn( self.wfs_img, [c0,c1,c2,c3]).sum()
 
-        # self.wfs_img = A*self.wfs_img/self.wfs_img.sum()
+        self.wfs_img = (A*self.wfs_img/self.wfs_img.sum())#.round()
         if full: self.wfs_imgF = self.wfs_imgF/self.wfs_imgF.max()*(2**self.bpp)
-        self.makeCents()
+        self.makeCents(nz=nz)
 
     def decompCents(self, DRAW=1, re=1):
         if self.full: self.decF = (self.wfs_centF.ravel('F'))@(self.Z_FOp_i)
